@@ -1,0 +1,26 @@
+version: '2'
+services:
+  db:
+    image: rethinkdb:latest
+    command: rethinkdb --bind all --join ${project}-db-1.kontena.local:29015
+    stateful: true
+
+  app:
+    image: kontena/todo-rethinkdb-example:latest
+    instances: 3
+    environment:
+      - RETHINKDB_URL=rethinkdb://${project}-db/todo_production
+      - KONTENA_LB_VIRTUAL_PATH=/
+      - KONTENA_LB_INTERNAL_PORT=9292
+    command: bundle exec puma -p 9292 -e production
+    deploy:
+      wait_for_port: 9292
+    links:
+      - loadbalancer
+
+  loadbalancer:
+    image: kontena/lb:latest
+    deploy:
+      strategy: daemon
+    ports:
+      - 80:80
